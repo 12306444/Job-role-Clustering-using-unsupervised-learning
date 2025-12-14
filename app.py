@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 import numpy as np
 import joblib
-from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_distances
 
 # --------------------------------------------------
@@ -11,10 +10,20 @@ MODEL_NAME = "sentence-transformers/all-mpnet-base-v2"
 DEFAULT_THRESHOLD = 0.70
 
 # --------------------------------------------------
-# LOAD MODEL & ARTIFACTS
+# LAZY LOAD MODEL (ONLY CHANGE)
 # --------------------------------------------------
-model = SentenceTransformer(MODEL_NAME)
+model = None
 
+def get_model():
+    global model
+    if model is None:
+        from sentence_transformers import SentenceTransformer
+        model = SentenceTransformer(MODEL_NAME)
+    return model
+
+# --------------------------------------------------
+# LOAD ARTIFACTS (UNCHANGED)
+# --------------------------------------------------
 cluster_centers_matrix = np.load("cluster_centers_matrix.npy")
 cluster_ids_sorted = np.load("cluster_ids_sorted.npy")
 cluster_labels = joblib.load("cluster_labels.pkl")
@@ -35,7 +44,7 @@ def home():
 # PREDICTION LOGIC (IDENTICAL)
 # --------------------------------------------------
 def predict_job_role_with_confidence(description, threshold=DEFAULT_THRESHOLD):
-    emb = model.encode([description], convert_to_numpy=True)
+    emb = get_model().encode([description], convert_to_numpy=True)
 
     distances = cosine_distances(emb, cluster_centers_matrix)[0]
     best_index = np.argmin(distances)
